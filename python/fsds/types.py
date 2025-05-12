@@ -1,6 +1,10 @@
 from __future__ import print_function
-import msgpackrpc # pip install msgpack-rpc-python
 import numpy as np # pip install numpy
+from typing import TYPE_CHECKING
+from dataclasses import dataclass, field, asdict
+
+if TYPE_CHECKING:
+    from typing import Any
 
 class MsgpackMixin:
     def __repr__(self):
@@ -11,12 +15,15 @@ class MsgpackMixin:
         return self.__dict__
 
     @classmethod
-    def from_msgpack(cls, encoded):
+    def from_msgpack(cls, encoded: "dict[bytes | str, Any]"):
         obj = cls()
-        #obj.__dict__ = {k.decode('utf-8'): (from_msgpack(v.__class__, v) if hasattr(v, "__dict__") else v) for k, v in encoded.items()}
-        obj.__dict__ = { k : (v if not isinstance(v, dict) else getattr(getattr(obj, k).__class__, "from_msgpack")(v)) for k, v in encoded.items()}
-        #return cls(**msgpack.unpack(encoded))
+        for  k, v in encoded.items():
+            obj_k = k.decode(encoding="utf-8") if isinstance(k, bytes) else k
+            setattr(obj, obj_k, v if not isinstance(v, dict) else getattr(obj, obj_k).__class__.from_msgpack(v))
         return obj
+
+    def to_dict(self) -> "dict[str, Any]":
+        return asdict(self)
 
 
 class ImageType:
@@ -29,15 +36,12 @@ class ImageType:
     SurfaceNormals = 6
     Infrared = 7
 
+@dataclass
 class Vector3r(MsgpackMixin):
-    x_val = 0.0
-    y_val = 0.0
-    z_val = 0.0
+    x_val: float = 0.0
+    y_val: float = 0.0
+    z_val: float = 0.0
 
-    def __init__(self, x_val = 0.0, y_val = 0.0, z_val = 0.0):
-        self.x_val = x_val
-        self.y_val = y_val
-        self.z_val = z_val
 
     @staticmethod
     def nanVector3r():
@@ -87,17 +91,12 @@ class Vector3r(MsgpackMixin):
         return np.array([self.x_val, self.y_val, self.z_val], dtype=np.float32)
 
 
+@dataclass
 class Quaternionr(MsgpackMixin):
-    w_val = 0.0
-    x_val = 0.0
-    y_val = 0.0
-    z_val = 0.0
-
-    def __init__(self, x_val = 0.0, y_val = 0.0, z_val = 0.0, w_val = 1.0):
-        self.x_val = x_val
-        self.y_val = y_val
-        self.z_val = z_val
-        self.w_val = w_val
+    w_val: float = 1.0
+    x_val: float = 0.0
+    y_val: float = 0.0
+    z_val: float = 0.0
 
     @staticmethod
     def nanQuaternionr():
@@ -174,70 +173,52 @@ class Quaternionr(MsgpackMixin):
         return np.array([self.x_val, self.y_val, self.z_val, self.w_val], dtype=np.float32)
 
 
+@dataclass
 class Pose(MsgpackMixin):
-    position = Vector3r()
-    orientation = Quaternionr()
-
-    def __init__(self, position_val = None, orientation_val = None):
-        position_val = position_val if position_val != None else Vector3r()
-        orientation_val = orientation_val if orientation_val != None else Quaternionr()
-        self.position = position_val
-        self.orientation = orientation_val
+    position: Vector3r = Vector3r()
+    orientation: Quaternionr = Quaternionr()
 
     @staticmethod
     def nanPose():
         return Pose(Vector3r.nanVector3r(), Quaternionr.nanQuaternionr())
 
+@dataclass
 class GeoPoint(MsgpackMixin):
-    latitude = 0.0
-    longitude = 0.0
-    altitude = 0.0
+    latitude: float = 0.0
+    longitude: float = 0.0
+    altitude: float = 0.0
 
 
+@dataclass
 class ImageRequest(MsgpackMixin):
-    camera_name = '0'
-    image_type = ImageType.Scene
-    pixels_as_float = False
-    compress = False
+    camera_name: str = '0'
+    image_type: int = ImageType.Scene
+    pixels_as_float: bool = False
+    compress: bool = True
 
-    def __init__(self, camera_name, image_type, pixels_as_float = False, compress = True):
-        self.camera_name = camera_name
-        self.image_type = image_type
-        self.pixels_as_float = pixels_as_float
-        self.compress = compress
-
-
+@dataclass
 class ImageResponse(MsgpackMixin):
-    image_data_uint8 = np.uint8(0)
-    image_data_float = 0.0
-    camera_position = Vector3r()
-    camera_orientation = Quaternionr()
-    time_stamp = np.uint64(0)
-    message = ''
-    pixels_as_float = 0.0
-    compress = True
-    width = 0
-    height = 0
-    image_type = ImageType.Scene
+    image_data_uint8: "np.uint8" = np.uint8(0)
+    image_data_float: float = 0.0
+    camera_position: Vector3r = Vector3r()
+    camera_orientation: Quaternionr = Quaternionr()
+    time_stamp: "np.uint64" = np.uint64(0)
+    message: str = ''
+    pixels_as_float: float = 0.0
+    compress: bool = True
+    width: int = 0
+    height: int = 0
+    image_type: int = ImageType.Scene
 
+@dataclass
 class CarControls(MsgpackMixin):
-    throttle = 0.0
-    steering = 0.0
-    brake = 0.0
-    handbrake = False
-    is_manual_gear = False
-    manual_gear = 0
-    gear_immediate = True
-
-    def __init__(self, throttle = 0, steering = 0, brake = 0,
-        handbrake = False, is_manual_gear = False, manual_gear = 0, gear_immediate = True):
-        self.throttle = throttle
-        self.steering = steering
-        self.brake = brake
-        self.handbrake = handbrake
-        self.is_manual_gear = is_manual_gear
-        self.manual_gear = manual_gear
-        self.gear_immediate = gear_immediate
+    throttle: float = 0.0
+    steering: float = 0.0
+    brake: float = 0.0
+    handbrake: bool = False
+    is_manual_gear: bool = False
+    manual_gear: int = 0
+    gear_immediate: bool = True
 
 
     def set_throttle(self, throttle_val, forward):
@@ -250,77 +231,89 @@ class CarControls(MsgpackMixin):
             self.manual_gear = -1
             self.throttle = - abs(throttle_val)
 
+@dataclass
 class KinematicsState(MsgpackMixin):
-    position = Vector3r()
-    orientation = Quaternionr()
-    linear_velocity = Vector3r()
-    angular_velocity = Vector3r()
-    linear_acceleration = Vector3r()
-    angular_acceleration = Vector3r()
+    position: Vector3r = Vector3r()
+    orientation: Quaternionr = Quaternionr()
+    linear_velocity: Vector3r = Vector3r()
+    angular_velocity: Vector3r = Vector3r()
+    linear_acceleration: Vector3r = Vector3r()
+    angular_acceleration: Vector3r = Vector3r()
 
+@dataclass
 class EnvironmentState(MsgpackMixin):
-    position = Vector3r()
-    geo_point = GeoPoint()
-    gravity = Vector3r()
-    air_pressure = 0.0
-    temperature = 0.0
-    air_density = 0.0
+    position: Vector3r = Vector3r()
+    geo_point: GeoPoint = GeoPoint()
+    gravityVector3r = Vector3r()
+    air_pressure: float = 0.0
+    temperature: float = 0.0
+    air_density: float = 0.0
 
+@dataclass
 class CollisionInfo(MsgpackMixin):
-    has_collided = False
-    normal = Vector3r()
-    impact_point = Vector3r()
-    position = Vector3r()
-    penetration_depth = 0.0
-    time_stamp = 0.0
-    object_name = ""
-    object_id = -1
+    has_collided: bool = False
+    normal: Vector3r = Vector3r()
+    impact_point: Vector3r = Vector3r()
+    position: Vector3r = Vector3r()
+    penetration_depth: float = 0.0
+    time_stamp: float = 0.0
+    object_name: str = ""
+    object_id: int = -1
 
+@dataclass
 class CarState(MsgpackMixin):
-    speed = 0.0
-    gear = 0 # deprecated, will be deleted
-    rpm = 0.0 # deprecated, will be deleted
-    maxrpm = 0.0 # deprecated, will be deleted
-    handbrake = False # deprecated, will be deleted
-    collision = CollisionInfo() # deprecated, will be deleted
-    kinematics_estimated = KinematicsState()
-    timestamp = np.uint64(0)
+    speed: float = 0.0
+    gear: int = 0 # deprecated, will be deleted
+    rpm: float = 0.0 # deprecated, will be deleted
+    maxrpm: float = 0.0 # deprecated, will be deleted
+    handbrake: bool = False # deprecated, will be deleted
+    collision: CollisionInfo = CollisionInfo() # deprecated, will be deleted
+    kinematics_estimated: KinematicsState = KinematicsState()
+    timestamp: "np.uint64" = np.uint64(0)
 
+@dataclass
 class Point2D(MsgpackMixin):
-    x = 0.0
-    y = 0.0
+    x: float = 0.0
+    y: float = 0.0
 
+@dataclass
 class RefereeState(MsgpackMixin):
-    doo_counter = 0
-    laps = 0.0
-    initial_position = Point2D()
-    cones = []
+    doo_counter: int = 0
+    laps: float = 0.0
+    initial_position: Point2D = Point2D()
+    cones: "list[Point2D]" = field(default_factory=list)
 
+@dataclass
 class ProjectionMatrix(MsgpackMixin):
-    matrix = []
+    matrix: "list" = field(default_factory=list)
 
+@dataclass
 class LidarData(MsgpackMixin):
-    point_cloud = []
-    time_stamp = np.uint64(0)
-    pose = Pose()
+    point_cloud: "list[Point2D]" = field(default_factory=list)
+    time_stamp: "np.uint64" = np.uint64(0)
+    pose: "Pose" = Pose()
 
+@dataclass
 class ImuData(MsgpackMixin):
-    time_stamp = np.uint64(0)
-    orientation = Quaternionr()
-    angular_velocity = Vector3r()
-    linear_acceleration = Vector3r()
+    time_stamp: "np.uint64" = np.uint64(0)
+    orientation: Quaternionr = Quaternionr()
+    angular_velocity: Vector3r = Vector3r()
+    linear_acceleration: Vector3r = Vector3r()
 
+@dataclass
 class GnssReport(MsgpackMixin):
-    geo_point = GeoPoint()
-    eph = 0.0
-    epv = 0.0
-    velocity = Vector3r()
-    time_utc = np.uint64(0)
+    geo_point: GeoPoint = GeoPoint()
+    eph: float = 0.0
+    epv: float = 0.0
+    velocity: Vector3r = Vector3r()
+    time_utc: "np.uint64" = np.uint64(0)
 
+@dataclass
 class GpsData(MsgpackMixin):
-    time_stamp = np.uint64(0)
-    gnss = GnssReport()
+    time_stamp: "np.uint64" = np.uint64(0)
+    gnss: GnssReport = GnssReport()
 
+@dataclass
 class GroundSpeedSensorData(MsgpackMixin):
-    time_stamp = np.uint64(0)
-    linear_velocity = Vector3r()
+    time_stamp: "np.uint64" = np.uint64(0)
+    linear_velocity: Vector3r = Vector3r()
