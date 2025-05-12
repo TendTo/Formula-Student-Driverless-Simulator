@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fsds"
+description = "FSDS is a community project with the goal to provide an end-to-end simulation for FS Driverless teams"
+version = "2.2.0"
+authors = [{ name = "Formula Student Driverless Community" }]
+dependencies = [
+    "numpy<=2.2.5",
+    "msgpack-python==0.5.6",
+    "roslibpy<=1.8.1",
+    "msgpack-rpc-python==0.4.1",
+]
+requires-python = ">= 3.10"
+readme = "README.md"
+license-files = ["LICENSE"]
+
+[project.urls]
+Homepage = "https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator"
+Issues = "https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator/issues"
+
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["fsds"]
+namespaces = false
