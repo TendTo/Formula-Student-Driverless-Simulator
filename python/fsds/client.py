@@ -4,14 +4,9 @@ from .utils import *
 from .types import *
 
 import msgpackrpc # pip install msgpack-rpc-python
-import numpy as np # pip install numpy
-import msgpack
-import time
-import math
-import logging
 
 class FSDSClient:
-    def __init__(self, ip = "", port = 41451, timeout_value = 3):
+    def __init__(self, ip: str = "", port: int = 41451, timeout_value: int = 3):
         if (ip == ""):
             ip = "127.0.0.1"
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
@@ -34,7 +29,7 @@ class FSDSClient:
         """
         return self.client.call('ping')
 
-    def enableApiControl(self, is_enabled, vehicle_name = 'FSCar'):
+    def enableApiControl(self, is_enabled: bool, vehicle_name: str = 'FSCar'):
         """
         Enables or disables API control for vehicle corresponding to vehicle_name
 
@@ -44,7 +39,7 @@ class FSDSClient:
         """
         self.client.call('enableApiControl', is_enabled, vehicle_name)
 
-    def isApiControlEnabled(self, vehicle_name = 'FSCar'):
+    def isApiControlEnabled(self, vehicle_name: str = 'FSCar'):
         """
         Returns true if API control is established.
 
@@ -72,7 +67,7 @@ class FSDSClient:
     # camera control
     # simGetImage returns compressed png in array of bytes
     # image_type uses one of the ImageType members
-    def simGetImage(self, camera_name, image_type, vehicle_name = 'FSCar'):
+    def simGetImage(self, camera_name: str, image_type: "ImageType", vehicle_name: str = 'FSCar'):
         """
         Get a single image
 
@@ -100,7 +95,7 @@ class FSDSClient:
     # camera control
     # simGetImage returns compressed png in array of bytes
     # image_type uses one of the ImageType members
-    def simGetImages(self, requests, vehicle_name = 'FSCar'):
+    def simGetImages(self, requests: "list[ImageRequest]", vehicle_name: str = 'FSCar'):
         """
         Get multiple images
 
@@ -117,7 +112,7 @@ class FSDSClient:
         return [ImageResponse.from_msgpack(response_raw) for response_raw in responses_raw]
 
 
-    def simGetGroundTruthKinematics(self, vehicle_name = 'FSCar'):
+    def simGetGroundTruthKinematics(self, vehicle_name: str = 'FSCar'):
         """
         Get Ground truth kinematics of the vehicle
 
@@ -132,7 +127,7 @@ class FSDSClient:
     simGetGroundTruthKinematics.__annotations__ = {'return': KinematicsState}
 
     # sensor APIs
-    def getLidarData(self, lidar_name = '', vehicle_name = 'FSCar'):
+    def getLidarData(self, lidar_name: str = '', vehicle_name: str = 'FSCar'):
         """
         Args:
             lidar_name (str, optional): Name of Lidar to get data from, specified in settings.json
@@ -142,7 +137,7 @@ class FSDSClient:
         """
         return LidarData.from_msgpack(self.client.call('getLidarData', lidar_name, vehicle_name))
 
-    def getImuData(self, imu_name = '', vehicle_name = 'FSCar'):
+    def getImuData(self, imu_name: str = '', vehicle_name: str = 'FSCar'):
         """
         Args:
             imu_name (str, optional): Name of IMU to get data from, specified in settings.json. When no name is provided the last imu will be used.
@@ -151,9 +146,10 @@ class FSDSClient:
         Returns:
             ImuData:
         """
+        print(self.client.call('getImuData', imu_name, vehicle_name))
         return ImuData.from_msgpack(self.client.call('getImuData', imu_name, vehicle_name))
 
-    def getGpsData(self, gps_name = '', vehicle_name = 'FSCar'):
+    def getGpsData(self, gps_name: str = '', vehicle_name: str = 'FSCar'):
         """
         Args:
             gps_name (str, optional): Name of GPS to get data from, specified in settings.json
@@ -164,7 +160,7 @@ class FSDSClient:
         """
         return GpsData.from_msgpack(self.client.call('getGpsData', gps_name, vehicle_name))
 
-    def getGroundSpeedSensorData(self, vehicle_name = 'FSCar'):
+    def getGroundSpeedSensorData(self, vehicle_name: str = 'FSCar'):
         """
         Args:
             vehicle_name (str, optional): Name of vehicle to which the sensor corresponds to. Default FSCar.
@@ -173,7 +169,7 @@ class FSDSClient:
         """
         return GroundSpeedSensorData.from_msgpack(self.client.call('getGroundSpeedSensorData', vehicle_name))
 
-    def setCarControls(self, controls, vehicle_name = 'FSCar'):
+    def setCarControls(self, controls: "CarControls", vehicle_name: str = 'FSCar'):
         """
         Control the car using throttle, steering, brake, etc.
 
@@ -183,7 +179,7 @@ class FSDSClient:
         """
         self.client.call('setCarControls', controls, vehicle_name)
 
-    def getCarState(self, vehicle_name = 'FSCar'):
+    def getCarState(self, vehicle_name: str = 'FSCar'):
         """
         Args:
             vehicle_name (str, optional): Name of vehicle
