@@ -299,6 +299,8 @@ class ImuData(MsgpackMixin):
     orientation: Quaternionr = Quaternionr()
     angular_velocity: Vector3r = Vector3r()
     linear_acceleration: Vector3r = Vector3r()
+    sigma_arw: float = 0
+    sigma_vrw: float = 0
 
 @dataclass
 class GnssReport(MsgpackMixin):
