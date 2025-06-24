@@ -28,5 +28,5 @@ fsds-ros = "fsds.scripts.ros:main"
 
 [tool.setuptools.packages.find]
 where = ["python"]
-include = ["fsds"]
+include = ["fsds*"]
 namespaces = false

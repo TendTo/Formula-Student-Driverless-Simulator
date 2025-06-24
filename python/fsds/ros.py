@@ -3,6 +3,9 @@ from roslibpy.ros2 import Header, Time
 from typing import Any, Callable, TypeVar, TypedDict
 from .types import *
 import struct
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def default_header(t: Time = None, frame_id: str = "") -> Header:
@@ -95,7 +98,7 @@ class RosBridgeClient:
                 "encoding": "bgr8",
                 "step": msg.width * 3,
                 "data": tuple(val for val in (msg.image_data_uint8)),
-                "is_bigendian": 0, # False
+                "is_bigendian": 0,  # False
             }
         if isinstance(msg, ImuData):
             avc = msg.sigma_arw**2
@@ -141,6 +144,7 @@ class RosBridgeClient:
         msg: "Vector3r | Quaternionr | Pose | GeoPoint | ImageResponse",
     ):
         ros_msg = self.dataclass_to_ros_msg(msg)
+        logger.info("Publishing msg of type '%s' to topic '%s'", obj_to_msg_type[type(msg)], topic)
         Topic(self._client, topic, obj_to_msg_type[type(msg)], latch=True).publish(ros_msg)
 
     @staticmethod

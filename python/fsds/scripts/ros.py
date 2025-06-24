@@ -1,6 +1,6 @@
 import time
 import fsds
-from fsds.ros import RosBridgeClient
+from fsds.ros import RosBridgeClient, ImageRequest, ImageType
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 
 
@@ -31,6 +31,7 @@ class CLIArgs(Namespace):
     lidar_topic: str
     imu_topic: str
     camera_topic: str
+    sensors: list[str]
 
 
 def arg_parser() -> "ArgumentParser":
@@ -44,12 +45,18 @@ def arg_parser() -> "ArgumentParser":
     parser.add_argument("--lidar-topic", type=str, default="/nrfai/lidar", help="ROS topic for LIDAR data")
     parser.add_argument("--imu-topic", type=str, default="/nrfai/imu", help="ROS topic for IMU data")
     parser.add_argument("--camera-topic", type=str, default="/nrfai/camera", help="ROS topic for camera data")
+    parser.add_argument(
+        "--sensors",
+        type=str,
+        default=["camera", "lidar", "imu"],
+        nargs="+",
+        help="List of sensors to use. Options: camera, lidar, imu",
+    )
     return parser
 
 
 def main():
     args: CLIArgs = arg_parser().parse_args()
-    TIME_STEP = args.timestep
 
     # connect to the AirSim simulator
     client = fsds.FSDSClient(ip=args.fsds_ip, port=args.fsds_port, timeout_value=args.timeout)
@@ -65,10 +72,13 @@ def main():
 
     with RosBridgeClient(host=args.ros_ip, port=args.ros_port) as ros_client:
         while True:
-            # ros_client.publish(args.imu_topic, client.getImuData())
-            # ros_client.publish(args.lidar_topic, client.getLidarData())
-            ros_client.publish(args.camera_topic, client.simGetImages())
-            time.sleep(TIME_STEP)
+            if "imu" in args.sensors:
+                ros_client.publish(args.imu_topic, client.getImuData())
+            if "lidar" in args.sensors:
+                ros_client.publish(args.lidar_topic, client.getLidarData())
+            if "camera" in args.sensors:
+                ros_client.publish(args.camera_topic, client.simGetImage(ImageRequest(image_type=ImageType.Scene)))
+            time.sleep(args.timestep)
 
 
 if __name__ == "__main__":
