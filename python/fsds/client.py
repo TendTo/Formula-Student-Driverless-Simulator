@@ -6,9 +6,7 @@ from .types import *
 import msgpackrpc # pip install msgpack-rpc-python
 
 class FSDSClient:
-    def __init__(self, ip: str = "", port: int = 41451, timeout_value: int = 3):
-        if (ip == ""):
-            ip = "127.0.0.1"
+    def __init__(self, ip: str = "127.0.0.1", port: int = 41451, timeout_value: int = 3):
         self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
 
     # -----------------------------------  Common vehicle APIs ---------------------------------------------
@@ -146,7 +144,6 @@ class FSDSClient:
         Returns:
             ImuData:
         """
-        print(self.client.call('getImuData', imu_name, vehicle_name))
         return ImuData.from_msgpack(self.client.call('getImuData', imu_name, vehicle_name))
 
     def getGpsData(self, gps_name: str = '', vehicle_name: str = 'FSCar'):
