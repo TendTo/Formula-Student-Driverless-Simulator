@@ -12,6 +12,7 @@ dependencies = [
     "msgpack-python==0.5.6",
     "roslibpy<=1.8.1",
     "msgpack-rpc-python==0.4.1",
+    "backports.ssl_match_hostname",
 ]
 requires-python = ">= 3.10"
 readme = "README.md"
@@ -20,6 +21,9 @@ license-files = ["LICENSE"]
 [project.urls]
 Homepage = "https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator"
 Issues = "https://github.com/FS-Driverless/Formula-Student-Driverless-Simulator/issues"
+
+[project.scripts]
+fsds-ros = "fsds.scripts.ros:main"
 
 
 [tool.setuptools.packages.find]
