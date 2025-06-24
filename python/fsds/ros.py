@@ -94,8 +94,8 @@ class RosBridgeClient:
                 "width": msg.width,
                 "encoding": "bgr8",
                 "step": msg.width * 3,
-                "data": msg.image_data_uint8,
-                "is_bigendian": False,
+                "data": tuple(val for val in (msg.image_data_uint8)),
+                "is_bigendian": 0, # False
             }
         if isinstance(msg, ImuData):
             avc = msg.sigma_arw**2
@@ -121,7 +121,7 @@ class RosBridgeClient:
                         "datatype": 7,  # Datatype FLOAT32 https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/PointField.html
                     }
                 )
-            data = [b for val in msg.point_cloud for b in struct.pack('f', val)]
+            data = [b for val in msg.point_cloud for b in struct.pack("f", val)]
             return {
                 "header": default_header(),
                 "height": 1,

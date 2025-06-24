@@ -210,12 +210,12 @@ class ImageRequest(MsgpackMixin):
     camera_name: str = "0"
     image_type: int = ImageType.Scene
     pixels_as_float: bool = False
-    compress: bool = True
+    compress: bool = False
 
 
 @dataclass
 class ImageResponse(MsgpackMixin):
-    image_data_uint8: "np.uint8" = np.uint8(0)
+    image_data_uint8: "bytes" = field(default_factory=bytes)
     image_data_float: float = 0.0
     camera_position: Vector3r = field(default_factory=Vector3r)
     camera_orientation: Quaternionr = field(default_factory=Quaternionr)

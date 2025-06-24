@@ -106,8 +106,31 @@ class FSDSClient:
         Returns:
             list[ImageResponse]:
         """
+        if not isinstance(requests, list):
+            requests = [requests]  # ensure requests is a list
         responses_raw = self.client.call('simGetImages', requests, vehicle_name)
         return [ImageResponse.from_msgpack(response_raw) for response_raw in responses_raw]
+
+
+    # camera control
+    # simGetImage returns compressed png in array of bytes
+    # image_type uses one of the ImageType members
+    def simGetImage(self, request: "ImageRequest", vehicle_name: str = 'FSCar'):
+        """
+        Get multiple images
+
+        See https://microsoft.github.io/AirSim/image_apis/ for details and examples
+
+        Args:
+            requests (list[ImageRequest]): Images required
+            vehicle_name (str, optional): Name of vehicle associated with the camera
+
+        Returns:
+            list[ImageResponse]:
+        """
+        responses_raw = self.client.call('simGetImages', [request], vehicle_name)
+        assert len(responses_raw) == 1, "Expected exactly one response for a single request"
+        return ImageResponse.from_msgpack(responses_raw[0])
 
 
     def simGetGroundTruthKinematics(self, vehicle_name: str = 'FSCar'):
