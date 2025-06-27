@@ -66,8 +66,8 @@ def main():
     client.enableApiControl(False)
 
     if args.no_ros:
+        print("Running without ROS. Press Ctrl+C to exit.")
         while True:
-            print("Running without ROS. Press Ctrl+C to exit.")
             time.sleep(args.timestep)
 
     with RosBridgeClient(host=args.ros_ip, port=args.ros_port) as ros_client:
@@ -85,6 +85,8 @@ def main():
                 )
             if "odom" in args.sensors:
                 ros_client.publish(args.odom_topic, client.getCarState())
+            if "track" in args.sensors:
+                ros_client.publish(args.track_topic, client.getRefereeState())
 
             time.sleep(args.timestep)
 

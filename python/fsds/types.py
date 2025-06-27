@@ -5,7 +5,15 @@ from dataclasses import dataclass, field, asdict, astuple
 import struct
 
 if TYPE_CHECKING:
-    from typing import Any, TypedDict
+    from typing import Any, TypedDict, Literal
+
+    ConeColor = Literal[0, 1, 2, 3, 4]
+    # Cone colors
+    # 0: Blue
+    # 1: Yellow
+    # 2: Orange Big
+    # 3: Orange Small
+    # 4: Unknown
 
     class Field(TypedDict):
         name: str
@@ -373,11 +381,43 @@ class Point2D(MsgpackMixin):
 
 
 @dataclass
+class Cone(MsgpackMixin):
+    x: float = 0.0
+    y: float = 0.0
+    color: "ConeColor" = 0  # Color of the cone. 0: Blue, 1: Yellow, 2: Orange Big, 3: Orange Small, 4: Unknown
+
+    def to_ros_msg(self, origin: Point2D) -> "dict[str, Any]":
+        # 0.01 is a scaling constant that converts to meters
+        return {
+            "location": {
+                "x": (self.x - origin.x) * 0.01,
+                # Negative sign follows ENU convention
+                "y": -(self.y - origin.y) * 0.01,
+                "z": 0.0,
+            },  # Assuming z is always 0 for 2D points
+            "color": self.color,
+        }
+
+
+@dataclass
 class RefereeState(MsgpackMixin):
     doo_counter: int = 0
     laps: float = 0.0
     initial_position: Point2D = field(default_factory=Point2D)
     cones: "list[Point2D]" = field(default_factory=list)
+
+    @classmethod
+    def from_msgpack(cls, encoded: "dict[bytes | str, Any]"):
+        obj = cls()
+        for k, v in encoded.items():
+            obj_k = k.decode(encoding="utf-8") if isinstance(k, bytes) else k
+            if k == "cones":
+                v = [Cone.from_msgpack(item) for item in v]
+            setattr(obj, obj_k, v if not isinstance(v, dict) else getattr(obj, obj_k).__class__.from_msgpack(v))
+        return obj
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        return {"cones": [cone.to_ros_msg(self.initial_position) for cone in self.cones]}
 
 
 @dataclass

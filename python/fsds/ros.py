@@ -28,7 +28,7 @@ obj_to_msg_type = {
     # CollisionInfo
     CarState: "nav_msgs/Odometry",
     Point2D: "geometry_msgs/Point",
-    # RefereeState
+    RefereeState: "newcastle_racing_ai_msgs/Track",
     # ProjectionMatrix
     LidarData: "sensor_msgs/PointCloud2",
     ImuData: "sensor_msgs/Imu",
