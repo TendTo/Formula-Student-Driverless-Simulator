@@ -61,6 +61,18 @@ class ImageType:
 
 
 @dataclass
+class Bool(MsgpackMixin):
+    data: bool = False
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        return {"data": self.data}
+
+    @classmethod
+    def from_ros_msg(cls, msg: "dict[str, Any]"):
+        return cls(data=msg.get("data", False))
+
+
+@dataclass
 class Vector3r(MsgpackMixin):
     x_val: float = 0.0
     y_val: float = 0.0

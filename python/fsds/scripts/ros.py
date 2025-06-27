@@ -1,6 +1,6 @@
 import time
 import fsds
-from fsds.ros import RosBridgeClient, ImageRequest, ImageType, CarControls
+from fsds.ros import RosBridgeClient, ImageRequest, ImageType, CarControls, Bool
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 import logging
 
@@ -28,6 +28,7 @@ class CLIArgs(Namespace):
     control_topic: str
     odom_topic: str
     track_topic: str
+    reset_topic: str
     sensors: list[str]
     receivers: list[str]
 
@@ -49,6 +50,7 @@ def arg_parser() -> "ArgumentParser":
     parser.add_argument("--control-topic", type=str, default="/nrfai/control", help="ROS topic for control control")
     parser.add_argument("--odom-topic", type=str, default="/nrfai/odom", help="ROS topic for odometry data")
     parser.add_argument("--track-topic", type=str, default="/nrfai/track", help="ROS topic for tracking data")
+    parser.add_argument("--reset-topic", type=str, default="/nrfai/reset", help="ROS topic to reset the simulation")
     parser.add_argument(
         "--sensors",
         type=str,
@@ -59,11 +61,21 @@ def arg_parser() -> "ArgumentParser":
     parser.add_argument(
         "--receivers",
         type=str,
-        default=["control"],
+        default=["control", "reset"],
         nargs="*",
-        help="List of receivers to use. Options: control",
+        help="List of receivers to use. Options: control, reset",
     )
     return parser
+
+
+def enable_api_control(client: fsds.FSDSClient, enable: bool):
+    """Enable or disable API control for the car."""
+    if enable:
+        logger.info("Enabling API control for the car. Keyboard and joystick control will be disabled.")
+        client.enableApiControl(True)
+    else:
+        logger.info("Disabling API control for the car. Keyboard and joystick control will be enabled.")
+        client.enableApiControl(False)
 
 
 def main():
@@ -81,12 +93,7 @@ def main():
     # Direct keyboard and joystick into the simulator are disabled.
     # If you want to still be able to drive with the keyboard while also
     # controlling the car using the api, call client.enableApiControl(False)
-    if "control" in args.receivers:
-        logger.info("Enabling API control for the car. Keyboard and joystick control will be disabled.")
-        client.enableApiControl(True)
-    else:
-        logger.info("Disabling API control for the car. Keyboard and joystick control will be enabled.")
-        client.enableApiControl(False)
+    enable_api_control(client, enable="control" in args.receivers)
 
     if args.no_ros:
         print("Running without ROS. Press Ctrl+C to exit.")
@@ -103,9 +110,13 @@ def main():
 
             logger.info("Subscribing to 'control' topic")
             ros_client.subscribe(args.control_topic, CarControls, control_cb)
+        if "reset" in args.receivers:
+            logger.info("Subscribing to 'reset' topic")
+            ros_client.subscribe(args.reset_topic, Bool, lambda _: client.reset())
+            enable_api_control(client, enable="control" in args.receivers)
 
         for sensor in args.sensors:
-            logger.info("Subscribing to %s topic", sensor)
+            logger.info("Publishing to %s topic", sensor)
 
         while True:
             logger.info("Publishing sensor data...")

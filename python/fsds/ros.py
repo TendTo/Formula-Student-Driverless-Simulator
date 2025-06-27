@@ -16,6 +16,7 @@ def default_header(t: Time = None, frame_id: str = "") -> Header:
 
 
 obj_to_msg_type = {
+    Bool: "std_msgs/Bool",
     Vector3r: "geometry_msgs/Vector3",
     Quaternionr: "geometry_msgs/Quaternion",
     Pose: "geometry_msgs/Pose",
