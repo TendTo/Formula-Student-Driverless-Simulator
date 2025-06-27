@@ -2,9 +2,16 @@ from __future__ import print_function
 import numpy as np  # pip install numpy
 from typing import TYPE_CHECKING
 from dataclasses import dataclass, field, asdict
+import struct
 
 if TYPE_CHECKING:
-    from typing import Any
+    from typing import Any, TypedDict
+
+    class Field(TypedDict):
+        name: str
+        offset: int
+        datatype: int
+        count: int
 
 
 class MsgpackMixin:
@@ -26,6 +33,9 @@ class MsgpackMixin:
 
     def to_dict(self) -> "dict[str, Any]":
         return asdict(self)
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        return self.to_dict()
 
 
 class ImageType:
@@ -93,6 +103,9 @@ class Vector3r(MsgpackMixin):
 
     def to_numpy_array(self):
         return np.array([self.x_val, self.y_val, self.z_val], dtype=np.float32)
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        return {k.removesuffix("_val"): v for k, v in self.to_dict().items()}
 
 
 @dataclass
@@ -187,6 +200,9 @@ class Quaternionr(MsgpackMixin):
     def to_numpy_array(self):
         return np.array([self.x_val, self.y_val, self.z_val, self.w_val], dtype=np.float32)
 
+    def to_ros_msg(self) -> "dict[str, Any]":
+        return {k.removesuffix("_val"): v for k, v in self.to_dict().items()}
+
 
 @dataclass
 class Pose(MsgpackMixin):
@@ -226,6 +242,25 @@ class ImageResponse(MsgpackMixin):
     width: int = 0
     height: int = 0
     image_type: int = ImageType.Scene
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        # Handle the more complex case of ImageResponse
+        if self.pixels_as_float:
+            # If the image is in float format, we need to convert it to uint8, clipping the values to a maximum depth
+            MAX_DEPTH = 40
+            data_float = np.clip(np.array(self.image_data_float), 0, MAX_DEPTH) * (255.0 / MAX_DEPTH)
+            data = tuple(int(val) for val in data_float)
+        else:
+            data = tuple(val for val in self.image_data_uint8)
+        return {
+            "header": None,  # Placeholder for header, can be set to a default header if needed
+            "height": self.height,
+            "width": self.width,
+            "encoding": "mono8" if self.pixels_as_float else "bgr8",
+            "step": self.width if self.pixels_as_float else self.width * 3,
+            "data": data,
+            "is_bigendian": 0,  # False
+        }
 
 
 @dataclass
@@ -318,6 +353,31 @@ class LidarData(MsgpackMixin):
     time_stamp: "np.uint64" = np.uint64(0)
     pose: "Pose" = field(default_factory=Pose)
 
+    def to_ros_msg(self) -> "dict[str, Any]":
+        fields: "list[Field]" = []
+        offset = 3 * 4
+        for i in range(0, offset, 4):
+            fields.append(
+                {
+                    "name": ("x" if i == 0 else ("y" if i == 4 else "z")),
+                    "offset": i,
+                    "count": 1,
+                    "datatype": 7,  # Datatype FLOAT32 https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/PointField.html
+                }
+            )
+        data = [b for val in self.point_cloud for b in struct.pack("f", val)]
+        return {
+            "header": None,  # Placeholder for header, can be set to a default header if needed
+            "height": 1,
+            "width": len(self.point_cloud) // 3,
+            "fields": fields,
+            "is_bigendian": False,
+            "point_step": offset,
+            "row_step": offset * len(self.point_cloud) // 3,
+            "is_dense": True,
+            "data": data,
+        }
+
 
 @dataclass
 class ImuData(MsgpackMixin):
@@ -327,6 +387,19 @@ class ImuData(MsgpackMixin):
     linear_acceleration: Vector3r = field(default_factory=Vector3r)
     sigma_arw: float = 0
     sigma_vrw: float = 0
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        avc = self.sigma_arw**2
+        lac = self.sigma_vrw**2
+        # Why is it like this? No idea, check airsim_ros_wrapper
+        return {
+            "header": None,  # Placeholder for header, can be set to a default header if needed
+            "orientation": self.orientation.to_ros_msg(),
+            "angular_velocity": self.angular_velocity.to_ros_msg(),
+            "linear_acceleration": self.linear_acceleration.to_ros_msg(),
+            "angular_velocity_covariance": [avc, 0, 0, 0, avc, 0, 0, 0, avc],
+            "linear_acceleration_covariance": [lac, 0, 0, 0, lac, 0, 0, 0, lac],
+        }
 
 
 @dataclass

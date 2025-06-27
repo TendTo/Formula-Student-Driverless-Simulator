@@ -40,13 +40,6 @@ obj_to_msg_type = {
 T = TypeVar("T")
 
 
-class Field(TypedDict):
-    name: str
-    offset: int
-    datatype: int
-    count: int
-
-
 class RosBridgeClient:
 
     def __init__(
@@ -86,64 +79,10 @@ class RosBridgeClient:
     def dataclass_to_ros_msg(cls, msg: "Vector3r | Quaternionr | Pose | GeoPoint | ImageResponse") -> dict:
         if type(msg) not in obj_to_msg_type:
             raise ValueError(f"{type(msg)} not among the allowed messages: {obj_to_msg_type.keys()}")
-        # For some reason these datclasses append "_val" to their fields. We muse remove it
-        if isinstance(msg, (Vector3r, Quaternionr)):
-            return {k.removesuffix("_val"): v for k, v in msg.to_dict().items()}
-        if isinstance(msg, ImageResponse):
-            # Handle the more complex case of ImageResponse
-            if msg.pixels_as_float:
-                # If the image is in float format, we need to convert it to uint8, clipping the values to a maximum depth
-                MAX_DEPTH = 40
-                data_float = np.clip(np.array(msg.image_data_float), 0, MAX_DEPTH) * (255.0 / MAX_DEPTH)
-                data = tuple(int(val) for val in data_float)
-            else:
-                data = tuple(val for val in msg.image_data_uint8)
-            return {
-                "header": default_header(),
-                "height": msg.height,
-                "width": msg.width,
-                "encoding": "mono8" if msg.pixels_as_float else "bgr8",
-                "step": msg.width if msg.pixels_as_float else msg.width * 3, 
-                "data": data,
-                "is_bigendian": 0,  # False
-            }
-        if isinstance(msg, ImuData):
-            avc = msg.sigma_arw**2
-            lac = msg.sigma_vrw**2
-            # Why is it like this? No idea, check airsim_ros_wrapper
-            return {
-                "header": default_header(),
-                "orientation": cls.dataclass_to_ros_msg(msg.orientation),
-                "angular_velocity": cls.dataclass_to_ros_msg(msg.angular_velocity),
-                "linear_acceleration": cls.dataclass_to_ros_msg(msg.linear_acceleration),
-                "angular_velocity_covariance": [avc, 0, 0, 0, avc, 0, 0, 0, avc],
-                "linear_acceleration_covariance": [lac, 0, 0, 0, lac, 0, 0, 0, lac],
-            }
-        if isinstance(msg, LidarData):
-            fields: list[Field] = []
-            offset = 3 * 4
-            for i in range(0, offset, 4):
-                fields.append(
-                    {
-                        "name": ("x" if i == 0 else ("y" if i == 4 else "z")),
-                        "offset": i,
-                        "count": 1,
-                        "datatype": 7,  # Datatype FLOAT32 https://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/PointField.html
-                    }
-                )
-            data = [b for val in msg.point_cloud for b in struct.pack("f", val)]
-            return {
-                "header": default_header(),
-                "height": 1,
-                "width": len(msg.point_cloud) // 3,
-                "fields": fields,
-                "is_bigendian": False,
-                "point_step": offset,
-                "row_step": offset * len(msg.point_cloud) // 3,
-                "is_dense": True,
-                "data": data,
-            }
-        return msg.to_dict()
+        msg = msg.to_ros_msg()
+        if "header" in msg and not isinstance(msg["header"], Header):
+            msg["header"] = default_header()
+        return msg
 
     def publish(
         self,
