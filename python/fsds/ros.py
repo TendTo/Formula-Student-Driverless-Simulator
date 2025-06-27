@@ -91,13 +91,20 @@ class RosBridgeClient:
             return {k.removesuffix("_val"): v for k, v in msg.to_dict().items()}
         if isinstance(msg, ImageResponse):
             # Handle the more complex case of ImageResponse
+            if msg.pixels_as_float:
+                # If the image is in float format, we need to convert it to uint8, clipping the values to a maximum depth
+                MAX_DEPTH = 40
+                data_float = np.clip(np.array(msg.image_data_float), 0, MAX_DEPTH) * (255.0 / MAX_DEPTH)
+                data = tuple(int(val) for val in data_float)
+            else:
+                data = tuple(val for val in msg.image_data_uint8)
             return {
                 "header": default_header(),
                 "height": msg.height,
                 "width": msg.width,
-                "encoding": "bgr8",
-                "step": msg.width * 3,
-                "data": tuple(val for val in (msg.image_data_uint8)),
+                "encoding": "mono8" if msg.pixels_as_float else "bgr8",
+                "step": msg.width if msg.pixels_as_float else msg.width * 3, 
+                "data": data,
                 "is_bigendian": 0,  # False
             }
         if isinstance(msg, ImuData):

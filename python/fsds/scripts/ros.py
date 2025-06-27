@@ -2,11 +2,12 @@ import time
 import fsds
 from fsds.ros import RosBridgeClient, ImageRequest, ImageType
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
-
+import numpy as np
 
 class CLIArgs(Namespace):
     """Command line arguments for the CLI interface."""
 
+    no_ros: bool
     fsds_ip: str
     fsds_port: int
     ros_ip: str
@@ -25,6 +26,7 @@ class CLIArgs(Namespace):
 
 def arg_parser() -> "ArgumentParser":
     parser = ArgumentParser(prog="pylucid", description=__doc__, formatter_class=ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--no-ros", action="store_true", help="Run the script without connecting to ROS")
     parser.add_argument("--fsds-ip", type=str, default="127.0.0.1", help="ip of the AirSim simulator")
     parser.add_argument("--fsds-port", type=int, default=41451, help="port of the AirSim simulator")
     parser.add_argument("--ros-ip", type=str, default="127.0.0.1", help="ip of the ROS bridge server")
@@ -63,6 +65,11 @@ def main():
     # controll the car using the api, call client.enableApiControl(False)
     client.enableApiControl(False)
 
+    if args.no_ros:
+        while True:
+            print("Running without ROS. Press Ctrl+C to exit.")
+            time.sleep(args.timestep)
+
     with RosBridgeClient(host=args.ros_ip, port=args.ros_port) as ros_client:
         while True:
             if "imu" in args.sensors:
@@ -73,10 +80,9 @@ def main():
                 ros_client.publish(args.camera_topic, client.simGetImage(ImageRequest(image_type=ImageType.Scene)))
             if "depth" in args.sensors:
                 ros_client.publish(
-                    args.depth_topic, client.simGetImage(ImageRequest(image_type=ImageType.DepthPerspective))
+                    args.depth_topic,
+                    client.simGetImage(ImageRequest(image_type=ImageType.DepthPerspective, pixels_as_float=True)),
                 )
-            if "odom" in args.sensors:
-                ros_client.publish(args.odom_topic, client.getCarState())
 
             time.sleep(args.timestep)
 
