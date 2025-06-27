@@ -4,21 +4,6 @@ from fsds.ros import RosBridgeClient, ImageRequest, ImageType
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 
 
-def show_lidar(lidar_data: "fsds.LidarData"):
-    import numpy as np
-    import matplotlib.pyplot as plt
-
-    plt.switch_backend("TkAgg")
-    data = np.array(lidar_data.point_cloud)
-    x = data[::3]
-    y = data[1::3]
-    z = data[2::3]
-    fig = plt.figure()
-    ax = fig.add_subplot(projection="3d")
-    ax.scatter(x, y, z)
-    plt.show()
-
-
 class CLIArgs(Namespace):
     """Command line arguments for the CLI interface."""
 
@@ -31,6 +16,10 @@ class CLIArgs(Namespace):
     lidar_topic: str
     imu_topic: str
     camera_topic: str
+    depth_topic: str
+    control_topic: str
+    odom_topic: str
+    track_topic: str
     sensors: list[str]
 
 
@@ -45,12 +34,16 @@ def arg_parser() -> "ArgumentParser":
     parser.add_argument("--lidar-topic", type=str, default="/nrfai/lidar", help="ROS topic for LIDAR data")
     parser.add_argument("--imu-topic", type=str, default="/nrfai/imu", help="ROS topic for IMU data")
     parser.add_argument("--camera-topic", type=str, default="/nrfai/camera", help="ROS topic for camera data")
+    parser.add_argument("--depth-topic", type=str, default="/nrfai/depth", help="ROS topic for depth data")
+    parser.add_argument("--control-topic", type=str, default="/nrfai/control", help="ROS topic for control commands")
+    parser.add_argument("--odom-topic", type=str, default="/nrfai/odom", help="ROS topic for odometry data")
+    parser.add_argument("--track-topic", type=str, default="/nrfai/track", help="ROS topic for tracking data")
     parser.add_argument(
         "--sensors",
         type=str,
-        default=["camera", "lidar", "imu"],
+        default=["camera", "depth", "lidar", "imu", "odom", "track"],
         nargs="+",
-        help="List of sensors to use. Options: camera, lidar, imu",
+        help="List of sensors to use. Options: camera, depth, lidar, imu, odom, track",
     )
     return parser
 
@@ -78,6 +71,13 @@ def main():
                 ros_client.publish(args.lidar_topic, client.getLidarData())
             if "camera" in args.sensors:
                 ros_client.publish(args.camera_topic, client.simGetImage(ImageRequest(image_type=ImageType.Scene)))
+            if "depth" in args.sensors:
+                ros_client.publish(
+                    args.depth_topic, client.simGetImage(ImageRequest(image_type=ImageType.DepthPerspective))
+                )
+            if "odom" in args.sensors:
+                ros_client.publish(args.odom_topic, client.getCarState())
+
             time.sleep(args.timestep)
 
 
