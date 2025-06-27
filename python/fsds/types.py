@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np  # pip install numpy
 from typing import TYPE_CHECKING
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, astuple
 import struct
 
 if TYPE_CHECKING:
@@ -30,6 +30,9 @@ class MsgpackMixin:
             obj_k = k.decode(encoding="utf-8") if isinstance(k, bytes) else k
             setattr(obj, obj_k, v if not isinstance(v, dict) else getattr(obj, obj_k).__class__.from_msgpack(v))
         return obj
+
+    def __iter__(self):
+        return iter(astuple(self))
 
     def to_dict(self) -> "dict[str, Any]":
         return asdict(self)
@@ -326,6 +329,41 @@ class CarState(MsgpackMixin):
     collision: CollisionInfo = field(default_factory=CollisionInfo)  # deprecated, will be deleted
     kinematics_estimated: KinematicsState = field(default_factory=KinematicsState)
     timestamp: "np.uint64" = np.uint64(0)
+
+    def to_ros_msg(self) -> "dict[str, Any]":
+        # Convert the quaternion to yaw angle
+        w, x, y, z = self.kinematics_estimated.orientation
+        yaw = np.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+        linear_forward = self.kinematics_estimated.linear_velocity.x_val * np.cos(
+            yaw
+        ) + self.kinematics_estimated.linear_velocity.y_val * np.sin(yaw)
+        linear_sideways = self.kinematics_estimated.linear_velocity.x_val * np.sin(
+            yaw
+        ) + self.kinematics_estimated.linear_velocity.y_val * -np.cos(yaw)
+        return {
+            "header": None,  # Placeholder for header, can be set to a default header if needed
+            "child_frame_id": "nrai",
+            "pose": {
+                "pose": {
+                    "position": self.kinematics_estimated.position.to_ros_msg(),
+                    "orientation": self.kinematics_estimated.orientation.to_ros_msg(),
+                }
+            },
+            "twist": {
+                "twist": {
+                    "linear": {
+                        "x": linear_forward,
+                        "y": linear_sideways,
+                        "z": self.kinematics_estimated.linear_velocity.z_val,
+                    },
+                    "angular": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": self.kinematics_estimated.angular_velocity.z_val,
+                    },
+                }
+            },
+        }
 
 
 @dataclass

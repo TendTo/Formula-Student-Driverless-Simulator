@@ -2,7 +2,7 @@ import time
 import fsds
 from fsds.ros import RosBridgeClient, ImageRequest, ImageType
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
-import numpy as np
+
 
 class CLIArgs(Namespace):
     """Command line arguments for the CLI interface."""
@@ -83,6 +83,8 @@ def main():
                     args.depth_topic,
                     client.simGetImage(ImageRequest(image_type=ImageType.DepthPerspective, pixels_as_float=True)),
                 )
+            if "odom" in args.sensors:
+                ros_client.publish(args.odom_topic, client.getCarState())
 
             time.sleep(args.timestep)
 

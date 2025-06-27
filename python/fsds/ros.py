@@ -26,7 +26,7 @@ obj_to_msg_type = {
     # KinematicsState
     # EnvironmentState
     # CollisionInfo
-    # CarState
+    CarState: "nav_msgs/Odometry",
     Point2D: "geometry_msgs/Point",
     # RefereeState
     # ProjectionMatrix
