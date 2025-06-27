@@ -12,4 +12,4 @@ WORKDIR /workspace/Formula-Student-Driverless-Simulator
 
 RUN pip install .
 
-ENTRYPOINT [ "fsds-ros" ]
+ENTRYPOINT [ "python3", "-u" ,"python/fsds/scripts/ros.py" ]

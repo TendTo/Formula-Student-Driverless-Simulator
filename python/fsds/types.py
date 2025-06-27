@@ -294,6 +294,18 @@ class CarControls(MsgpackMixin):
             self.manual_gear = -1
             self.throttle = -abs(throttle_val)
 
+    @classmethod
+    def from_ros_msg(cls, msg: "dict[str, Any]"):
+        return cls(
+            throttle=msg.get("throttle", 0.0),
+            steering=msg.get("steering", 0.0),
+            brake=msg.get("brake", 0.0),
+            handbrake=msg.get("handbrake", False),
+            is_manual_gear=msg.get("is_manual_gear", False),
+            manual_gear=msg.get("manual_gear", 0),
+            gear_immediate=msg.get("gear_immediate", True),
+        )
+
 
 @dataclass
 class KinematicsState(MsgpackMixin):

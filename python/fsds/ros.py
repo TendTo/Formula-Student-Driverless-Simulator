@@ -90,17 +90,13 @@ class RosBridgeClient:
         msg: "Vector3r | Quaternionr | Pose | GeoPoint | ImageResponse",
     ):
         ros_msg = self.dataclass_to_ros_msg(msg)
-        logger.info("Publishing msg of type '%s' to topic '%s'", obj_to_msg_type[type(msg)], topic)
+        logger.debug("Publishing msg of type '%s' to topic '%s'", obj_to_msg_type[type(msg)], topic)
         Topic(self._client, topic, obj_to_msg_type[type(msg)], latch=True).publish(ros_msg)
 
-    @staticmethod
-    def ros_msg_to_dataclass(msg_type: type[T], msg: dict) -> T:
-        print(f"ros_msg_to_dataclass: {msg_type}, {msg}")
-        return msg_type(**msg)
-
     def subscribe(self, topic: str, msg_type: type[T], cb: "Callable[[T], None]") -> int:
+        logger.debug("Subscribing to topic '%s' with msg type '%s'", topic, obj_to_msg_type[msg_type])
         self._subscribed_topics.append(Topic(self._client, topic, obj_to_msg_type[msg_type]))
-        self._subscribed_topics[-1].subscribe(lambda msg: cb(self.ros_msg_to_dataclass(msg_type, msg)))
+        self._subscribed_topics[-1].subscribe(lambda msg: cb(msg_type.from_ros_msg(msg)))
         return len(self._subscribed_topics) - 1
 
     def unsubscribe(self, topic_idx: int):
